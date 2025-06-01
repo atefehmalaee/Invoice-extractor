@@ -3,3 +3,6 @@ invoice-env/
 __pycache__/
 *.pyc
 *.csv
+.env
+*.db
+.vscode/
