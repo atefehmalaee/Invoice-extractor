@@ -20,4 +20,6 @@ async def extract_invoice(file: UploadFile = File(...)):
     result = poller.result()
     parsed = parse_invoice(result)
     return parsed
- 
+@app.get("/")
+def home():
+    return {"message": "Invoice Extractor API is live!"}
