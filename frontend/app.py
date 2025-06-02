@@ -9,7 +9,7 @@ uploaded_file = st.file_uploader("Upload your invoice (PDF)", type="pdf")
 if uploaded_file:
     with st.spinner("Extracting..."):
         files = {"file": uploaded_file.getvalue()}
-        response = requests.post("http://localhost:8000/extract", files=files)
+        response = requests.post("https://invoice-extractor-ykmg.onrender.com/extract", files=files)
         data = response.json()
         df = pd.DataFrame(data)
         st.success("Extraction complete!")
