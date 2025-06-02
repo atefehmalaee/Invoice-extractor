@@ -7,4 +7,3 @@ requests
 pandas
 python-multipart
 jinja2
-python-3.10.13
