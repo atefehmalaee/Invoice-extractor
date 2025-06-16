@@ -1,10 +1,29 @@
-def parse_invoice(result):
+"""
+processor.py
+
+This module contains the `parse_invoice` function which processes the output from
+Azure Form Recognizer's prebuilt-invoice model and extracts structured invoice data.
+"""
+
+from typing import List
+
+
+def parse_invoice(result) -> List[dict]:
+    """
+    Parses the invoice data returned from Azure Form Recognizer into a structured format.
+
+    Args:
+        result: The analysis result object returned from the Azure Form Recognizer client.
+
+    Returns:
+        List[dict]: A list of extracted invoice dictionaries with metadata and line items.
+    """
     extracted = []
 
     for doc in result.documents:
         fields = doc.fields
 
-        # Extract basic top-level fields
+        # --- Basic Invoice Fields ---
         invoice_total = fields.get("InvoiceTotal").value if fields.get("InvoiceTotal") else None
         vendor = fields.get("VendorName").value if fields.get("VendorName") else ""
         invoice_id = fields.get("InvoiceId").value if fields.get("InvoiceId") else ""
@@ -13,7 +32,7 @@ def parse_invoice(result):
         total = invoice_total.amount if invoice_total and hasattr(invoice_total, "amount") else ""
         customer = fields.get("CustomerName").value if fields.get("CustomerName") else ""
 
-        # Extract optional extra fields
+        # --- Optional Fields ---
         shipping_amount = (
             fields.get("ShippingAmount").value.amount
             if fields.get("ShippingAmount") and hasattr(fields.get("ShippingAmount").value, "amount")
@@ -28,7 +47,7 @@ def parse_invoice(result):
 
         due_date = str(fields.get("DueDate").value) if fields.get("DueDate") else ""
 
-        # Clean ShipTo
+        # --- Ship To Field (Handle Nested Types) ---
         ship_to = fields.get("ShipTo")
         ship_to_value = ""
         if ship_to:
@@ -37,12 +56,12 @@ def parse_invoice(result):
             elif hasattr(ship_to.value, "address"):
                 ship_to_value = str(ship_to.value.address)
 
-        # Fallback for known vendor
-        if not vendor and "SuperStore" in result.content:
+        # --- Vendor Fallback (Based on Content Heuristic) ---
+        if not vendor and hasattr(result, "content") and "SuperStore" in result.content:
             vendor = "SuperStore"
 
-        # Build main invoice dict
-        data = {
+        # --- Assemble Core Invoice Info ---
+        invoice_data = {
             "Vendor": vendor,
             "InvoiceId": invoice_id,
             "InvoiceDate": invoice_date,
@@ -55,7 +74,7 @@ def parse_invoice(result):
             "DueDate": due_date
         }
 
-        # Line items
+        # --- Extract Line Items ---
         items = fields.get("Items")
         item_list = []
         if items and items.value:
@@ -65,6 +84,7 @@ def parse_invoice(result):
                 description = item_fields.get("Description").value if item_fields.get("Description") else ""
                 quantity = item_fields.get("Quantity").value if item_fields.get("Quantity") else ""
 
+                # Handle Unit Price or fallback to Price
                 rate = ""
                 if item_fields.get("UnitPrice"):
                     unit = item_fields.get("UnitPrice").value
@@ -82,7 +102,7 @@ def parse_invoice(result):
                     "Amount": amount
                 })
 
-        data["Items"] = item_list
-        extracted.append(data)
+        invoice_data["Items"] = item_list
+        extracted.append(invoice_data)
 
     return extracted
